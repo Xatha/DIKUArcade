@@ -1,15 +1,13 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using DIKUArcade.Graphics;
+using DIKUArcade.DataStructures;
 
 namespace DIKUArcade.Entities {
     public sealed class EntityContainer<T> : IEnumerable where T: Entity {
-        private List<T> entities;
+        private readonly DoubleBufferedList<T> entities;
 
         public EntityContainer(int size) {
-            entities = new List<T>(size);
+            entities = new DoubleBufferedList<T>((uint)size);
         }
 
         public EntityContainer() : this(50) { }
@@ -26,27 +24,26 @@ namespace DIKUArcade.Entities {
         /// <param name="obj">Generic object of type T</param>
         public delegate void IteratorMethod(T obj);
 
-        /// <summary>Iterate through all objects in this EntityContainer.</summary>
+        /// <summary>Iterate through all Entities in this EntityContainer.</summary>
         /// <remarks>This method can modify objects during iteration!
         /// If this functionality is undesired, iterate then through this
         /// EntityContainer using a 'foreach'-loop (from IEnumerable).</remarks>
         public void Iterate(IteratorMethod iterator) {
-            var count = entities.Count;
-            var newList = new List<T>(count);
-
-            // iterate through entities
-            for (int i = 0; i < count; i++) {
-                iterator(entities[i]);
-            }
-
-            // keep Entities that have not been marked for deletion during iteration
-            foreach (var obj in entities) {
-                if (!obj.IsDeleted()) {
-                    newList.Add(obj);
-                }
-            }
-            entities = newList;
+            entities.MutatingIterator(e =>
+            {
+                iterator(e);
+                return !e.IsDeleted();
+            });
         }
+        
+        /// <summary>Iterate through all Entities in this EntityContainer.</summary>
+        /// <remarks>This method cannot modify objects during iteration, but is much faster than <see cref="Iterate"/>> 
+        /// when entity count is large, because it utilises parallelization. As a consequence, the given delegate has to be thread-safe.
+        /// If you need to perform thread-unsafe operations,  consider using a foreach'-loop instead.</remarks>
+        public void ImmutableIterate(IteratorMethod iterator) {
+            entities.ParallelImmutableIterator(e => iterator(e));
+        }
+
 
         /// <summary>
         /// Render all entities in this EntityContainer
@@ -70,41 +67,16 @@ namespace DIKUArcade.Entities {
         public int CountEntities() {
             return entities.Count;
         }
-
+        
         // IEnumerable interface:
         #region IEnumerable
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
+        IEnumerator IEnumerable.GetEnumerator() {
             return GetEnumerator();
         }
 
-        public IEnumerator GetEnumerator() {
-            return new EntityContainerEnum(entities);
-        }
-
-        private class EntityContainerEnum : IEnumerator<T> {
-            private ReadOnlyCollection<T> entities;
-            private int position = -1;
-
-            public EntityContainerEnum(List<T> entities) {
-                this.entities = entities.AsReadOnly();
-            }
-
-            public bool MoveNext() {
-                position++;
-                return position < entities.Count;
-            }
-
-            public void Reset() {
-                position = -1;
-            }
-
-            void IDisposable.Dispose() { }
-
-            object IEnumerator.Current => Current;
-
-            public T Current => entities[position];
+        public IEnumerator<Entity> GetEnumerator() {
+            return entities.GetEnumerator();
         }
 
         #endregion

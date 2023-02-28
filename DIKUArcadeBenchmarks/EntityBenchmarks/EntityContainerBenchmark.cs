@@ -58,35 +58,72 @@ public class EntityContainerBenchmark
 
     
     [Benchmark]
-    public void Iterate()
+    public void Normal_Iterate()
     {
-        container.Iterate(new EntityContainer.IteratorMethod(e =>
+        container.Iterate(e =>
         {
-            if (random.Next(100) > 50)
+            var r = Random.Shared.Next(100);
+            if (r > 50)
             {
-                //e.DeleteEntity();
-                count += random.Next(5);
+                count += r;
             }
-        }));
-
-        count -= container.CountEntities();
+        });
     }
 
-    [Benchmark]
-    public void IterateBuffered()
+   [Benchmark]
+    public void Buffered_Mutating_Sequential_Iterate()
     {
         containerBuffered.Iterate(e =>
         {
-            if (random.Next(100) > 50)
+            var r = Random.Shared.Next(100);
+            if (r > 50)
             {
-                //e.DeleteEntity();
-                //count += random.Next(5);
+                count += r;
             }
         });
-
-        count = container.CountEntities();
     }
     
+    [Benchmark]
+    public void Buffered_Immutable_Parallel_Iterate()
+    {
+        containerBuffered.ImmutableIterate(e =>
+        {
+            var r = Random.Shared.Next(100);
+            if (r > 50)
+            {
+                count += r;
+            }
+        });
+    }
+
+    [Benchmark]
+    public void Normal_ForEach()
+    {
+        foreach (Entity entity in container)
+        {
+            var r = Random.Shared.Next(100);
+            if (r > 50)
+            {
+                count += r;
+            }
+        }
+        
+    }
+    
+    [Benchmark]
+    public void Buffered_ForEach()
+    {
+        foreach (Entity entity in containerBuffered)
+        {
+            var r = Random.Shared.Next(100);
+            if (r > 50)
+            {
+                count += r;
+            }
+        }
+    }
+
+
     //[Benchmark]
     public void SetupContainer()
     {

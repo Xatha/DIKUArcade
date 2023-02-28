@@ -2,14 +2,15 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using DIKUArcade.DataStructures;
 using DIKUArcade.Graphics;
 
 namespace DIKUArcade.Entities {
     public class EntityContainerBuffered : IEnumerable {
-        public DoubleBufferedCollection<Entity> entities;//TODO make private
+        private DoubleBufferedList<Entity> entities;
 
         public EntityContainerBuffered(uint size) {
-            entities = new DoubleBufferedCollection<Entity>(size);
+            entities = new DoubleBufferedList<Entity>(size);
         }
 
         public EntityContainerBuffered() : this(50) { }
@@ -35,11 +36,19 @@ namespace DIKUArcade.Entities {
         /// If this functionality is undesired, iterate then through this
         /// EntityContainer using a 'foreach'-loop (from IEnumerable).</remarks>
         public void Iterate(IteratorMethod iterator) {
-            entities.MapToBuffer(e =>
+            entities.MutatingIterator(e =>
             {
                 iterator(e);
                 return !e.IsDeleted();
             });
+        }
+        
+        /// <summary>Iterate through all Entities in this EntityContainer.</summary>
+        /// <remarks>This method cannot modify objects during iteration, but is much faster than <see cref="Iterate"/>>
+        /// because it utilises parallelization. As a consequence, the given delegate has to be thread-safe.
+        /// If you need to perform thread-unsafe operations,  consider using a foreach'-loop instead.</remarks>
+        public void ImmutableIterate(IteratorMethod iterator) {
+            entities.ParallelImmutableIterator(e => iterator(e));
         }
 
         /// <summary>
@@ -77,44 +86,12 @@ namespace DIKUArcade.Entities {
         // IEnumerable interface:
         #region IEnumerable
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
+        IEnumerator IEnumerable.GetEnumerator() {
             return GetEnumerator();
         }
 
-        public IEnumerator GetEnumerator() {
-            //return new EntityContainerEnum(entities);
-            return null;
-        }
-
-        private class EntityContainerEnum : IEnumerator {
-            private ReadOnlyCollection<Entity> entities;
-            private int position = -1;
-
-            public EntityContainerEnum(List<Entity> entities) {
-                this.entities = entities.AsReadOnly();
-            }
-
-            public bool MoveNext() {
-                position++;
-                return position < entities.Count;
-            }
-
-            public void Reset() {
-                position = -1;
-            }
-
-            object IEnumerator.Current => Current;
-
-            public Entity Current {
-                get {
-                    try {
-                        return entities[position];
-                    } catch (IndexOutOfRangeException) {
-                        throw new InvalidOperationException();
-                    }
-                }
-            }
+        public IEnumerator<Entity> GetEnumerator() {
+            return entities.GetEnumerator();
         }
 
         #endregion
