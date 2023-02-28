@@ -39,7 +39,7 @@ namespace DIKUArcade.Entities {
         /// <summary>Iterate through all Entities in this EntityContainer.</summary>
         /// <remarks>This method cannot modify objects during iteration, but is much faster than <see cref="Iterate"/>> 
         /// when entity count is large, because it utilises parallelization. As a consequence, the given delegate has to be thread-safe.
-        /// If you need to perform thread-unsafe operations,  consider using a foreach'-loop instead.</remarks>
+        /// If you need to perform thread-unsafe operations, consider using a foreach'-loop instead.</remarks>
         public void ImmutableIterate(IteratorMethod iterator) {
             entities.ParallelImmutableIterator(e => iterator(e));
         }
