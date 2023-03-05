@@ -1,9 +1,12 @@
 ﻿using System;
-using System.Drawing.Imaging;
+using System.Diagnostics;
 using System.IO;
 using OpenTK.Mathematics;
 using OpenTK.Graphics.OpenGL;
 using DIKUArcade.Entities;
+using DIKUArcade.GUI;
+using StbImageSharp;
+using PixelFormat = OpenTK.Graphics.OpenGL.PixelFormat;
 
 namespace DIKUArcade.Graphics {
     public class Texture {
@@ -15,6 +18,7 @@ namespace DIKUArcade.Graphics {
         private int textureId;
 
         public Texture(string filename) {
+            Console.WriteLine("Texture!!!");
             // create a texture id
             textureId = GL.GenTexture();
 
@@ -32,22 +36,21 @@ namespace DIKUArcade.Graphics {
             dir = dir.Parent;
 
             // load image file
-            var path = Path.Combine(dir.FullName.ToString(), filename);
+            var path = Path.Combine(dir.FullName, filename);
             if (!File.Exists(path))
             {
                 throw new FileNotFoundException($"Error: The file \"{path}\" does not exist.");
             }
-            System.Drawing.Bitmap image = new System.Drawing.Bitmap(path);
-            BitmapData data = image.LockBits(new System.Drawing.Rectangle(0, 0, image.Width, image.Height),
-                ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
-
+            
+            // Load image with StbImageSharp.
+            // This is recommended by OpenTK.https://opentk.net/learn/chapter1/5-textures.html?tabs=load-texture-opentk4
+            ImageResult image = ImageResult.FromStream(File.OpenRead(path), ColorComponents.RedGreenBlueAlpha);
+            
             // attach it to OpenGL context
             GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba,
-                data.Width, data.Height, 0, OpenTK.Graphics.OpenGL.PixelFormat.Bgra,
-                PixelType.UnsignedByte, data.Scan0);
-
-            image.UnlockBits(data);
-
+                image.Width, image.Height, 0, PixelFormat.Rgba,
+                PixelType.UnsignedByte, image.Data);
+            
             // set texture properties, filters, blending functions, etc.
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter,
                 (int)TextureMinFilter.Linear);
@@ -75,6 +78,7 @@ namespace DIKUArcade.Graphics {
                 throw new ArgumentOutOfRangeException(
                     $"Invalid stride numbers: ({currentStride}/{stridesInImage})");
             }
+
             // create a texture id
             textureId = GL.GenTexture();
 
@@ -89,6 +93,7 @@ namespace DIKUArcade.Graphics {
             {
                 dir = dir.Parent;
             }
+
             dir = dir.Parent;
 
             // load image file
@@ -97,18 +102,53 @@ namespace DIKUArcade.Graphics {
             {
                 throw new FileNotFoundException($"Error: The file \"{path}\" does not exist.");
             }
-            System.Drawing.Bitmap image = new System.Drawing.Bitmap(path);
-            var width = (int)((float)image.Width / (float)stridesInImage);
-            var posX = currentStride * width;
-            BitmapData data = image.LockBits(new System.Drawing.Rectangle(posX, 0, width, image.Height),
-                ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
 
-            // attach it to OpenGL context
+            //TODO: Refactor.
+            ImageResult image = ImageResult.FromStream(File.OpenRead(path), ColorComponents.RedGreenBlueAlpha);
+            
+            int segmentWidth = image.Width / stridesInImage;
+            int segmentHeight = image.Height;
+            int currentX = 0;
+            int currentY = 0;
+            int xOffset = 0;
+            int endX = segmentWidth;
+
+            byte[][] segments = new byte[stridesInImage][];
+
+            int segmentIndex = 0;
+            
+            for (int segmentOffset = 0; segmentOffset < stridesInImage; segmentOffset++)
+            {
+                byte[] segment = new byte[segmentWidth * segmentHeight * 4];
+
+                while (currentY < segmentHeight)
+                {
+                    while (currentX < endX)
+                    {
+                        int index = (currentY * image.Width + currentX) * 4;
+                    
+                        segment[segmentIndex++] = image.Data[index];
+                        segment[segmentIndex++] = image.Data[index + 1];
+                        segment[segmentIndex++] = image.Data[index + 2];
+                        segment[segmentIndex++] = image.Data[index + 3];
+                    
+                        currentX += 1;
+                    }
+                    currentX = xOffset;
+                    currentY++;
+                }
+                currentX = endX;
+                xOffset = endX;
+                endX += segmentWidth;
+                currentY = 0;
+
+                segmentIndex = 0;
+                segments[segmentOffset] = segment;
+            }
+
             GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba,
-                data.Width, data.Height, 0, OpenTK.Graphics.OpenGL.PixelFormat.Bgra,
-                PixelType.UnsignedByte, data.Scan0);
-
-            image.UnlockBits(data);
+                segmentWidth, segmentHeight, 0, OpenTK.Graphics.OpenGL.PixelFormat.Rgba,
+                PixelType.UnsignedByte, segments[currentStride]);
 
             // set texture properties, filters, blending functions, etc.
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter,

@@ -54,6 +54,9 @@ public class Game : DIKUGame {
             case KeyboardKey.Escape:
                 window.CloseWindow();
                 break;
+            case KeyboardKey.F12: //TODO: REMOVE
+                window.SaveScreenShot();
+                break;
         }
     }
 

@@ -370,7 +370,7 @@ namespace DIKUArcade.GUI {
             GL.ReadPixels(0, 0, window.Size.X, window.Size.Y, PixelFormat.Bgr, 
                 PixelType.UnsignedByte, pixelsArray);
 
-            Bmp image = Bmp.ConvertPixelDataToBmp(pixelsArray, (uint)window.Size.X, (uint)window.Size.Y);
+            Bmp image = Bmp.ConvertPixelDataToBmp(pixelsArray, (uint)window.Size.X, (uint)window.Size.Y, 3);
 
             Console.WriteLine(image.Save(path) ? $"Screenshot saved to = {path}" : $"Unable to save screenshot to = {path}");
         }

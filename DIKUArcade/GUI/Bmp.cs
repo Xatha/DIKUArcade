@@ -13,7 +13,7 @@ public readonly struct Bmp
     //INFO HEADER
     private const uint FILE_HEADER_SIZE = 40;
     private const ushort NUMBER_OF_COLOR_PLANES = 1;
-    private const ushort BITS_PER_PIXEL = 24;
+    private readonly ushort _bitsPerPixel;
     private const uint COMPRESSION_METHOD = 0;
     private const uint HORIZONTAL_RESOLUTION = 0;
     private const uint VERTICAL_RESOLUTION = 0;
@@ -26,14 +26,15 @@ public readonly struct Bmp
     private readonly uint _pixelArraySize;
     private readonly uint _fileSize;
 
-    public Bmp(uint width, uint height)
+    public Bmp(uint width, uint height, ushort channels)
     {
+        _bitsPerPixel = (ushort)(channels * 8);
         _width = width;
         _height = height;
 
-        const int padding = 31;
-        var rowSize = (_width * BITS_PER_PIXEL + padding) / 32 * 4;
-        _pixelArraySize = rowSize * _height;
+        //const int padding = 31;
+        //var rowSize = (_width * BITS_PER_PIXEL + padding) / 32 * 4;
+        _pixelArraySize = _width * _height * channels;
         _fileSize = _pixelArraySize + PIXEL_ARRAY_OFFSET;
 
         // Create a byte array to hold the .bmp file data
@@ -56,10 +57,17 @@ public readonly struct Bmp
         return true;
     }
     
-    public static Bmp ConvertPixelDataToBmp(byte[] pixelData, uint width, uint height)
+    public static Bmp ConvertPixelDataToBmp(byte[] pixelData, uint width, uint height, ushort channels)
     {
-        Bmp bmp = new Bmp(width, height);
+        Bmp bmp = new Bmp(width, height, channels);
         bmp.WritePixelData(pixelData);
+        return bmp;
+    }
+    
+    public static Bmp ConvertPixelDataToBmp(Span<byte> pixelData, uint width, uint height, ushort channels)
+    {
+        Bmp bmp = new Bmp(width, height, channels);
+        bmp.WritePixelData(pixelData.ToArray());
         return bmp;
     }
     
@@ -77,7 +85,7 @@ public readonly struct Bmp
         WriteUInt32(_data, 18, _width); // Width
         WriteUInt32(_data, 22, _height); // Height
         WriteUInt16(_data, 26, NUMBER_OF_COLOR_PLANES); // Number of color planes
-        WriteUInt16(_data, 28, BITS_PER_PIXEL); // Bits per pixel
+        WriteUInt16(_data, 28, _bitsPerPixel); // Bits per pixel
         WriteUInt32(_data, 30, COMPRESSION_METHOD); // Compression method (0 = uncompressed)
         WriteUInt32(_data, 34, _pixelArraySize); // Size of the pixel array
         WriteUInt32(_data, 38, HORIZONTAL_RESOLUTION); // Horizontal resolution (pixels per meter)

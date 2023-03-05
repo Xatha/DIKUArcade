@@ -77,6 +77,7 @@ namespace DIKUArcade.Graphics {
 
         // This method assumes that
         private void CreateBitmapTexture() {
+            //TODO: IMPLEMENT
             BindTexture();
 
             System.Drawing.Bitmap textBmp = new System.Drawing.Bitmap(500, 500); // match window size
@@ -151,6 +152,7 @@ namespace DIKUArcade.Graphics {
         /// </summary>
         /// <param name="fontfamily">The name of the font family</param>
         public void SetFont(string fontfamily) {
+            //TODO: IMPLEMENT
             // The loop below checks if said font is installed, if not defaults to Arial.
             var fontsCollection = new InstalledFontCollection();
             foreach (var fontFamily in fontsCollection.Families) {
