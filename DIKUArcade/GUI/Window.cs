@@ -1,8 +1,4 @@
 ﻿using System;
-using PixelFormat = System.Drawing.Imaging.PixelFormat;
-using Bitmap = System.Drawing.Bitmap;
-using RotateFlipType = System.Drawing.RotateFlipType;
-using System.Drawing.Imaging;
 using System.IO;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.Common;
@@ -337,41 +333,46 @@ namespace DIKUArcade.GUI {
         /// </summary>
         /// <exception cref="GraphicsContextMissingException"></exception>
         public void SaveScreenShot() {
-            if (window.Context == null) {
-                throw new ArgumentNullException("GraphicsContextMissingException");
+            var assemblyLocation = Path.GetDirectoryName(
+                System.Reflection.Assembly.GetExecutingAssembly().Location);
+            if (assemblyLocation is null or "") {
+                Console.WriteLine("Error saving screenshot: assembly location is null or empty.");
+                return;
             }
 
-            var bmp = new Bitmap(window.ClientSize.X, window.ClientSize.Y, PixelFormat.Format24bppRgb);
-            var data = bmp.LockBits(new System.Drawing.Rectangle(0, 0, window.ClientSize.X, window.ClientSize.Y),
-                                    ImageLockMode.WriteOnly,
-                                    PixelFormat.Format24bppRgb);
-            GL.ReadPixels(0, 0, window.ClientSize.X, window.ClientSize.Y,
-                OpenTK.Graphics.OpenGL.PixelFormat.Bgr,
-                PixelType.UnsignedByte, data.Scan0);
-            bmp.UnlockBits(data);
-
-            bmp.RotateFlip(RotateFlipType.RotateNoneFlipY);
-
-            // save screenshot, not in bin/Debug (et sim.), but in a logical place
-            var dir = new DirectoryInfo(Path.GetDirectoryName(
-                System.Reflection.Assembly.GetExecutingAssembly().Location));
-
-            while (dir.Name != "bin") {
-                dir = dir.Parent;
+            var dir = new DirectoryInfo(assemblyLocation);
+            
+            while (dir?.Name != "bin") {
+                dir = dir?.Parent;
             }
             dir = dir.Parent;
-
-            // build the save path
-            var saveName = $"screenShot_{Window.screenShotCounter++}.bmp";
-            var folder = Path.Combine(dir.ToString(), "screenShots");
-            var path = Path.Combine(folder, saveName);
-
-            if (!Directory.Exists(folder)) {
-                Directory.CreateDirectory(folder);
+            
+            if (dir is null) {
+                Console.WriteLine("Error saving screenshot: screenshot directory not found.");
+                return;
             }
 
-            bmp.Save(path);
-            Console.WriteLine($"Screenshot saved as: {path}");
+            // Build screenshot path.
+            var screenshotFolderPath = Path.Combine(dir.FullName, "screenShots");
+            DirectoryInfo screenshotFolder;
+            if (!Directory.Exists(screenshotFolderPath)) {
+                screenshotFolder = Directory.CreateDirectory(screenshotFolderPath);
+            } else {
+                screenshotFolder = new DirectoryInfo(screenshotFolderPath);
+            }
+
+            uint currentCount = (uint)screenshotFolder.GetFiles("screenShot_*.bmp").Length + 1;
+            var saveName = $"screenShot_{currentCount}.bmp";
+            var path = Path.Combine(screenshotFolderPath, saveName);
+
+            // Read pixels from the GL buffer.
+            byte[] pixelsArray = new byte[window.Size.X * window.Size.Y * 3];
+            GL.ReadPixels(0, 0, window.Size.X, window.Size.Y, PixelFormat.Bgr, 
+                PixelType.UnsignedByte, pixelsArray);
+
+            Bmp image = Bmp.ConvertPixelDataToBmp(pixelsArray, (uint)window.Size.X, (uint)window.Size.Y);
+
+            Console.WriteLine(image.Save(path) ? $"Screenshot saved to = {path}" : $"Unable to save screenshot to = {path}");
         }
     }
 }

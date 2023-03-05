@@ -9,6 +9,7 @@ public class Game : DIKUGame {
 
     private Text text;
     public Game(WindowArgs windowArgs) : base(windowArgs) {
+        window.SetClearColor(new Vec3F(1, 1, 1)); //TODO: REMOVE
         text = new Text("MIN TEXT", new Vec2F(0.25f, 0.25f), new Vec2F(0.25f, 0.25f));
         text.SetColor(255, 255, 0, 0);
         text.GetShape().Rotation = (float)System.Math.PI / -3.0f;
