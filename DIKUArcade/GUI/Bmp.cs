@@ -1,10 +1,9 @@
 using System;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 
 namespace DIKUArcade.GUI;
 
-public class Bmp
+public readonly struct Bmp
 {
     //HEADER
     private const ushort FILE_TYPE = 19778; //BM 
@@ -22,10 +21,8 @@ public class Bmp
     private const uint NUMBER_OF_SIGNIFICANT_COLORS = 0;
 
     private readonly byte[] _data;
-    private readonly byte[] _pixelData;
     private readonly uint _width;
     private readonly uint _height;
-    private readonly uint _rowSize;
     private readonly uint _pixelArraySize;
     private readonly uint _fileSize;
 
@@ -35,13 +32,12 @@ public class Bmp
         _height = height;
 
         const int padding = 31;
-        _rowSize = (_width * BITS_PER_PIXEL + padding) / 32 * 4;
-        _pixelArraySize = _rowSize * _height;
+        var rowSize = (_width * BITS_PER_PIXEL + padding) / 32 * 4;
+        _pixelArraySize = rowSize * _height;
         _fileSize = _pixelArraySize + PIXEL_ARRAY_OFFSET;
 
         // Create a byte array to hold the .bmp file data
         _data = new byte[_fileSize];
-
         WriteHeader();
     }
 
