@@ -18,6 +18,7 @@ public class Game : DIKUGame {
 
 
     public override void Render() {
+        text.SetColor(255, 255, 0, 0);
         text.RenderText();
     }
 

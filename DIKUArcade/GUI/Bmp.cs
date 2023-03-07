@@ -31,13 +31,10 @@ public readonly struct Bmp
         _bitsPerPixel = (ushort)(channels * 8);
         _width = width;
         _height = height;
-
-        //const int padding = 31;
-        //var rowSize = (_width * BITS_PER_PIXEL + padding) / 32 * 4;
+        
         _pixelArraySize = _width * _height * channels;
         _fileSize = _pixelArraySize + PIXEL_ARRAY_OFFSET;
 
-        // Create a byte array to hold the .bmp file data
         _data = new byte[_fileSize];
         WriteHeader();
     }
